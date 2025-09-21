@@ -141,7 +141,6 @@ export default function FormularioVisitante() {
     }
 
     try {
-      // 🔹 ao enviar não guardamos mais o DRAFT, só fixamos culto e congregação
       const k = fixedKeyForToday();
       const fixedPrev = JSON.parse(localStorage.getItem(k) || "{}");
       localStorage.setItem(k, JSON.stringify({
@@ -150,36 +149,6 @@ export default function FormularioVisitante() {
         congregacao: form.congregacao || fixedPrev.congregacao || ""
       }));
     } catch { }
-
-    // aqui ainda poderia enviar para backend se quiser
-    const registro = {
-      nome: form.nome,
-      sexo: form.sexo,
-      perfilEtario: form.perfilEtario,
-      tipoCulto: form.tipoCulto,
-      congregacao: form.congregacao,
-      frequenta: form.frequenta,
-      qualIgreja: form.qualIgreja || "",
-      procurando: form.procurando,
-      temCargo: form.temCargo,
-      cargo: form.temCargo === "sim" && form.cargo ? cargoLabel(form.cargo, form.sexo) : "",
-      comoconheceu: form.comoconheceu,
-      comoconheceuLabel:
-        form.comoconheceu === "convite"
-          ? `Convite de ${form.nomeConvidador}`
-          : ({
-            redes: "Redes sociais (Instagram, Facebook, etc.)",
-            google: "Busca no Google ou na internet",
-            outro: "Outro"
-          }[form.comoconheceu] || "-"),
-      nomeConvidador: form.nomeConvidador || "",
-      dataRef: new Date().toLocaleDateString("pt-BR"),
-      dataHora: new Date().toLocaleString("pt-BR"),
-      whatsapp: form.whatsapp || ""
-    };
-
-    // 🔹 se quiser salvar no backend, trocar por fetch POST
-    // fetch(`${API_URL}/visitantes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(registro) });
 
     const mensagem = encodeURIComponent(montarMensagem());
     window.open(`https://wa.me/?text=${mensagem}`, "_blank", "noopener,noreferrer");
@@ -224,8 +193,9 @@ export default function FormularioVisitante() {
     } catch { }
   };
 
-  // opções
+  // opções com "Selecione"
   const tipoCultoOptions = [
+    { value: "", label: "Selecione" },
     { value: "Culto Santa Ceia", label: "Santa Ceia" },
     { value: "Culto da Família", label: "Família" },
     { value: "Culto de Ensino", label: "Ensino" },
@@ -242,10 +212,12 @@ export default function FormularioVisitante() {
     { value: "Culto Especial", label: "Especial" }
   ];
   const sexoOptions = [
+    { value: "", label: "Selecione" },
     { value: "masculino", label: "Masculino" },
     { value: "feminino", label: "Feminino" }
   ];
   const perfilEtarioOptions = [
+    { value: "", label: "Selecione" },
     { value: "crianca", label: "Criança" },
     { value: "adolescente", label: "Adolescente" },
     { value: "jovem", label: "Jovem" },
@@ -253,17 +225,20 @@ export default function FormularioVisitante() {
     { value: "idoso", label: "Idoso" }
   ];
   const simNao = [
+    { value: "", label: "Selecione" },
     { value: "sim", label: "Sim" },
     { value: "não", label: "Não" }
   ];
   const comoConheceuOptions = [
+    { value: "", label: "Selecione" },
     { value: "redes", label: "Redes sociais (Instagram, Facebook, etc.)" },
     { value: "google", label: "Busca no Google ou na internet" },
     { value: "convite", label: "Convite de um membro da igreja" },
     { value: "outro", label: "Outro" }
   ];
-  const congregacaoOptions = useMemo(() => congregacoes.map(c => ({ value: c, label: c })), []);
+  const congregacaoOptions = useMemo(() => [{ value: "", label: "Selecione" }, ...congregacoes.map(c => ({ value: c, label: c }))], []);
   const cargoOptions = useMemo(() => [
+    { value: "", label: "Selecione" },
     { value: "diacono", label: cargoLabel("diacono", form.sexo) },
     { value: "presbitero", label: cargoLabel("presbitero", form.sexo) },
     { value: "evangelista", label: cargoLabel("evangelista", form.sexo) },
@@ -292,7 +267,7 @@ export default function FormularioVisitante() {
 
   return (
     <div className="formulario">
-      {/* Campos */}
+      {/* Campos com Selects já ajustados */}
       <div className="field">
         <label className="field-label">Tipo de culto</label>
         <Select styles={selectStyles} isSearchable={false}
@@ -352,6 +327,7 @@ export default function FormularioVisitante() {
           value={getOpt(comoConheceuOptions, form.comoconheceu)}
           onChange={(o) => setField("comoconheceu", o?.value)} />
       </div>
+
       {form.comoconheceu === "convite" && (
         <div className="field">
           <label className="field-label">Nome de quem convidou</label>
@@ -437,5 +413,3 @@ export default function FormularioVisitante() {
     </div>
   );
 }
-
-     

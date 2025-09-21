@@ -1,3 +1,4 @@
+// src/components/Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -7,6 +8,8 @@ export default function Login() {
   const [matricula, setMatricula] = useState("");
   const [cpf, setCpf] = useState("");
   const navigate = useNavigate();
+
+  const API_URL = "https://sistema-visitantes-backend.onrender.com";
 
   // máscara matrícula (até 6 dígitos numéricos)
   const handleMatriculaChange = (e) => {
@@ -59,7 +62,7 @@ export default function Login() {
     }
 
     try {
-      const res = await fetch("http://localhost:3001/login", {
+      const res = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

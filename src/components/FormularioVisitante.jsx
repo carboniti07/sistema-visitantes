@@ -170,31 +170,45 @@ export default function FormularioVisitante() {
     } catch { }
   };
 
-  const handleEnviar = () => {
-    if (!validateObrigatorios()) {
-      setMensagemStatus("❌ Responda as alternativas");
-      return;
-    }
+const handleEnviar = async () => {
+  if (!validateObrigatorios()) {
+    setMensagemStatus("❌ Responda as alternativas");
+    return;
+  }
 
-    try {
-      const k = fixedKeyForToday();
-      const fixedPrev = JSON.parse(localStorage.getItem(k) || "{}");
-      localStorage.setItem(k, JSON.stringify({
-        ...fixedPrev,
-        tipoCulto: form.tipoCulto || fixedPrev.tipoCulto || "",
-        congregacao: form.congregacao || fixedPrev.congregacao || ""
-      }));
-    } catch { }
+  // Detecta ambiente: localhost em dev, Render em produção
+  const API_URL =
+    window.location.hostname === "localhost"
+      ? "http://localhost:3001"
+      : "https://sistema-visitantes-backend.onrender.com";
 
+  try {
+    // 🔹 Salvar visitante no backend
+    await fetch(`${API_URL}/visitantes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        comoconheceuLabel:
+          comoConheceuOptions.find((c) => c.value === form.comoconheceu)?.label || "",
+        dataHora: new Date().toLocaleString("pt-BR"),
+      }),
+    });
+
+    // 🔹 Abre mensagem no WhatsApp
     const mensagem = encodeURIComponent(montarMensagem());
     window.open(`https://wa.me/?text=${mensagem}`, "_blank", "noopener,noreferrer");
 
-    setMensagemStatus("✅ Mensagem aberta no WhatsApp.");
+    setMensagemStatus("✅ Visitante salvo e mensagem aberta no WhatsApp.");
     setTimeout(() => setMensagemStatus(""), 3000);
 
-    // 🔹 limpa os outros campos mantendo culto e congregação
-    limparTudo();
-  };
+    limparTudo(); // mantém culto e congregação
+  } catch (err) {
+    console.error("Erro ao salvar visitante:", err);
+    setMensagemStatus("❌ Erro ao salvar visitante no servidor.");
+  }
+};
+
 
   // opções
   const tipoCultoOptions = [

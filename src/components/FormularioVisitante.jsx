@@ -14,10 +14,7 @@ const DRAFT_KEY = "visitante_form_draft";
 const FIXED_PREFIX = "visitante_fixos_";
 const todayKey = () => {
   const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 const fixedKeyForToday = () => `${FIXED_PREFIX}${todayKey()}`;
 
@@ -144,7 +141,7 @@ export default function FormularioVisitante() {
     }
 
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+      // 🔹 ao enviar não guardamos mais o DRAFT, só fixamos culto e congregação
       const k = fixedKeyForToday();
       const fixedPrev = JSON.parse(localStorage.getItem(k) || "{}");
       localStorage.setItem(k, JSON.stringify({
@@ -154,7 +151,7 @@ export default function FormularioVisitante() {
       }));
     } catch { }
 
-    // 🔑 salvar todos os valores exatamente como escolhidos
+    // aqui ainda poderia enviar para backend se quiser
     const registro = {
       nome: form.nome,
       sexo: form.sexo,
@@ -181,14 +178,13 @@ export default function FormularioVisitante() {
       whatsapp: form.whatsapp || ""
     };
 
-    const lista = JSON.parse(localStorage.getItem("visitantes") || "[]");
-    lista.push(registro);
-    localStorage.setItem("visitantes", JSON.stringify(lista));
+    // 🔹 se quiser salvar no backend, trocar por fetch POST
+    // fetch(`${API_URL}/visitantes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(registro) });
 
     const mensagem = encodeURIComponent(montarMensagem());
     window.open(`https://wa.me/?text=${mensagem}`, "_blank", "noopener,noreferrer");
 
-    setMensagemStatus("✅ Mensagem aberta no WhatsApp. Os dados foram salvos.");
+    setMensagemStatus("✅ Mensagem aberta no WhatsApp.");
     setTimeout(() => setMensagemStatus(""), 3000);
   };
 
@@ -356,7 +352,6 @@ export default function FormularioVisitante() {
           value={getOpt(comoConheceuOptions, form.comoconheceu)}
           onChange={(o) => setField("comoconheceu", o?.value)} />
       </div>
-
       {form.comoconheceu === "convite" && (
         <div className="field">
           <label className="field-label">Nome de quem convidou</label>
@@ -443,3 +438,4 @@ export default function FormularioVisitante() {
   );
 }
 
+     

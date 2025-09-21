@@ -34,7 +34,9 @@ export default function Dashboard() {
     congregacao: "",
   });
 
-  // login/session
+  const API_URL = "https://sistema-visitantes-backend.onrender.com";
+
+  // login/session + carregar visitantes
   useEffect(() => {
     const savedUser = JSON.parse(sessionStorage.getItem("auth_user"));
     if (!savedUser) {
@@ -48,12 +50,16 @@ export default function Dashboard() {
       congregacao: savedUser.isSede ? "" : savedUser.congregacao,
     }));
 
-    const lista = JSON.parse(localStorage.getItem("visitantes") || "[]");
-    const dadosFiltrados = savedUser.isSede
-      ? lista
-      : lista.filter((v) => v.congregacao === savedUser.congregacao);
-
-    setVisitantes(dadosFiltrados);
+    // Buscar visitantes da API
+    fetch(`${API_URL}/visitantes`)
+      .then((res) => res.json())
+      .then((data) => {
+        const dadosFiltrados = savedUser.isSede
+          ? data
+          : data.filter((v) => v.congregacao === savedUser.congregacao);
+        setVisitantes(dadosFiltrados);
+      })
+      .catch((err) => console.error("Erro ao carregar visitantes:", err));
   }, [navigate]);
 
   if (!user) return null;
@@ -65,12 +71,15 @@ export default function Dashboard() {
   };
 
   // deletar visitante
-  const handleDelete = (index) => {
+  const handleDelete = async (id) => {
     if (!window.confirm("Deseja realmente apagar este visitante?")) return;
-    const novaLista = [...visitantes];
-    novaLista.splice(index, 1);
-    setVisitantes(novaLista);
-    localStorage.setItem("visitantes", JSON.stringify(novaLista));
+
+    try {
+      await fetch(`${API_URL}/visitantes/${id}`, { method: "DELETE" });
+      setVisitantes((prev) => prev.filter((v) => v._id !== id));
+    } catch (err) {
+      console.error("Erro ao deletar visitante:", err);
+    }
   };
 
   // filtros
@@ -78,7 +87,9 @@ export default function Dashboard() {
     const matchTipo = filtros.tipoCulto ? v.tipoCulto === filtros.tipoCulto : true;
     const matchSexo = filtros.sexo ? v.sexo === filtros.sexo : true;
     const matchEtaria = filtros.faixaEtaria ? v.perfilEtario === filtros.faixaEtaria : true;
-    const dataVisitante = new Date(v.dataRef.split("/").reverse().join("-"));
+    const dataVisitante = v.dataRef
+      ? new Date(v.dataRef.split("/").reverse().join("-"))
+      : new Date();
     const matchDataInicio = filtros.dataInicio ? dataVisitante >= filtros.dataInicio : true;
     const matchDataFim = filtros.dataFim ? dataVisitante <= filtros.dataFim : true;
     const matchCong =
@@ -89,85 +100,75 @@ export default function Dashboard() {
   });
 
   // exportar Excel
- const exportToExcel = () => {
-  if (visitantesFiltrados.length === 0) {
-    alert("Nenhum visitante para exportar.");
-    return;
-  }
+  const exportToExcel = () => {
+    if (visitantesFiltrados.length === 0) {
+      alert("Nenhum visitante para exportar.");
+      return;
+    }
 
-  const dadosFormatados = visitantesFiltrados.map((v) => ({
-    Nome: v.nome,
-    Sexo: v.sexo || "-",
-    "Faixa Etária": v.perfilEtario || "-",
-    "Tipo de Culto": v.tipoCulto,
-    Congregação: v.congregacao,
-    "Frequenta outra igreja":
-      v.frequenta === "sim"
-        ? `Sim (${v.qualIgreja || "-"})`
-        : v.frequenta === "não"
-        ? "Não"
-        : "-",
-    "Procurando igreja":
-      v.procurando === "sim"
-        ? "Sim"
-        : v.procurando === "não"
-        ? "Não"
-        : "-",
-    Cargo:
-      v.temCargo === "sim"
-        ? v.cargo || "-"
-        : v.temCargo === "não"
-        ? "Não"
-        : "-",
-    "Como conheceu": v.comoconheceuLabel || "-",
-    "Data/Hora": v.dataHora || v.dataRef,
-    WhatsApp: v.whatsapp || "-",
-  }));
+    const dadosFormatados = visitantesFiltrados.map((v) => ({
+      Nome: v.nome,
+      Sexo: v.sexo || "-",
+      "Faixa Etária": v.perfilEtario || "-",
+      "Tipo de Culto": v.tipoCulto,
+      Congregação: v.congregacao,
+      "Frequenta outra igreja":
+        v.frequenta === "sim"
+          ? `Sim (${v.qualIgreja || "-"})`
+          : v.frequenta === "não"
+          ? "Não"
+          : "-",
+      "Procurando igreja":
+        v.procurando === "sim"
+          ? "Sim"
+          : v.procurando === "não"
+          ? "Não"
+          : "-",
+      Cargo:
+        v.temCargo === "sim"
+          ? v.cargo || "-"
+          : v.temCargo === "não"
+          ? "Não"
+          : "-",
+      "Como conheceu": v.comoconheceuLabel || "-",
+      "Data/Hora": v.dataHora || v.dataRef,
+      WhatsApp: v.whatsapp || "-",
+    }));
 
-  // Cabeçalho na ordem desejada
-  const header = [
-    "Nome",
-    "Sexo",
-    "Faixa Etária",
-    "Tipo de Culto",
-    "Congregação",
-    "Frequenta outra igreja",
-    "Procurando igreja",
-    "Cargo",
-    "Como conheceu",
-    "Data/Hora",
-    "WhatsApp",
-  ];
+    const header = [
+      "Nome",
+      "Sexo",
+      "Faixa Etária",
+      "Tipo de Culto",
+      "Congregação",
+      "Frequenta outra igreja",
+      "Procurando igreja",
+      "Cargo",
+      "Como conheceu",
+      "Data/Hora",
+      "WhatsApp",
+    ];
 
-  // Cria planilha
-  const worksheet = XLSX.utils.json_to_sheet(dadosFormatados, { header });
+    const worksheet = XLSX.utils.json_to_sheet(dadosFormatados, { header });
+    const colWidths = header.map((key) => ({
+      wch: Math.max(
+        key.length,
+        ...dadosFormatados.map((row) => (row[key] ? row[key].toString().length : 0))
+      ),
+    }));
+    worksheet["!cols"] = colWidths;
+    worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+    worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
 
-  // Largura automática das colunas
-  const colWidths = header.map((key) => ({
-    wch: Math.max(
-      key.length,
-      ...dadosFormatados.map((row) => (row[key] ? row[key].toString().length : 0))
-    ),
-  }));
-  worksheet["!cols"] = colWidths;
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Visitantes");
 
-  // Auto-filtro (use a ref diretamente)
-  worksheet["!autofilter"] = { ref: worksheet["!ref"] };
-
-  // Congela a primeira linha (compatível nas versões recentes do xlsx)
-  worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
-
-  // Workbook e download
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Visitantes");
-
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([excelBuffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  saveAs(blob, "visitantes.xlsx");
-};
-
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "visitantes.xlsx");
+  };
 
   // opções selects
   const opcoesTipoCulto = [
@@ -412,8 +413,8 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {visitantesFiltrados.map((v, i) => (
-                <tr key={i}>
+              {visitantesFiltrados.map((v) => (
+                <tr key={v._id}>
                   <td>{v.nome}</td>
                   <td>{v.sexo || "-"}</td>
                   <td>{v.perfilEtario || "-"}</td>
@@ -445,7 +446,7 @@ export default function Dashboard() {
                   {user.isSede && <td>{v.whatsapp || "-"}</td>}
                   <td>
                     <button
-                      onClick={() => handleDelete(i)}
+                      onClick={() => handleDelete(v._id)}
                       className="delete-btn"
                       title="Apagar visitante"
                     >

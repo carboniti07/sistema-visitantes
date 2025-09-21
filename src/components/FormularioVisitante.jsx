@@ -134,60 +134,6 @@ export default function FormularioVisitante() {
     return linhas.join("\n");
   };
 
-  const handleEnviar = () => {
-    if (!validateObrigatorios()) {
-      setMensagemStatus("❌ Responda as alternativas");
-      return;
-    }
-
-    try {
-      // 🔹 ao enviar não guardamos mais o DRAFT, só fixamos culto e congregação
-      const k = fixedKeyForToday();
-      const fixedPrev = JSON.parse(localStorage.getItem(k) || "{}");
-      localStorage.setItem(k, JSON.stringify({
-        ...fixedPrev,
-        tipoCulto: form.tipoCulto || fixedPrev.tipoCulto || "",
-        congregacao: form.congregacao || fixedPrev.congregacao || ""
-      }));
-    } catch { }
-
-    // aqui ainda poderia enviar para backend se quiser
-    const registro = {
-      nome: form.nome,
-      sexo: form.sexo,
-      perfilEtario: form.perfilEtario,
-      tipoCulto: form.tipoCulto,
-      congregacao: form.congregacao,
-      frequenta: form.frequenta,
-      qualIgreja: form.qualIgreja || "",
-      procurando: form.procurando,
-      temCargo: form.temCargo,
-      cargo: form.temCargo === "sim" && form.cargo ? cargoLabel(form.cargo, form.sexo) : "",
-      comoconheceu: form.comoconheceu,
-      comoconheceuLabel:
-        form.comoconheceu === "convite"
-          ? `Convite de ${form.nomeConvidador}`
-          : ({
-            redes: "Redes sociais (Instagram, Facebook, etc.)",
-            google: "Busca no Google ou na internet",
-            outro: "Outro"
-          }[form.comoconheceu] || "-"),
-      nomeConvidador: form.nomeConvidador || "",
-      dataRef: new Date().toLocaleDateString("pt-BR"),
-      dataHora: new Date().toLocaleString("pt-BR"),
-      whatsapp: form.whatsapp || ""
-    };
-
-    // 🔹 se quiser salvar no backend, trocar por fetch POST
-    // fetch(`${API_URL}/visitantes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(registro) });
-
-    const mensagem = encodeURIComponent(montarMensagem());
-    window.open(`https://wa.me/?text=${mensagem}`, "_blank", "noopener,noreferrer");
-
-    setMensagemStatus("✅ Mensagem aberta no WhatsApp.");
-    setTimeout(() => setMensagemStatus(""), 3000);
-  };
-
   const limparTudo = () => {
     let keepTipo = form.tipoCulto;
     let keepCong = form.congregacao;
@@ -222,6 +168,32 @@ export default function FormularioVisitante() {
         JSON.stringify({ ...prevFixed, tipoCulto: next.tipoCulto, congregacao: next.congregacao })
       );
     } catch { }
+  };
+
+  const handleEnviar = () => {
+    if (!validateObrigatorios()) {
+      setMensagemStatus("❌ Responda as alternativas");
+      return;
+    }
+
+    try {
+      const k = fixedKeyForToday();
+      const fixedPrev = JSON.parse(localStorage.getItem(k) || "{}");
+      localStorage.setItem(k, JSON.stringify({
+        ...fixedPrev,
+        tipoCulto: form.tipoCulto || fixedPrev.tipoCulto || "",
+        congregacao: form.congregacao || fixedPrev.congregacao || ""
+      }));
+    } catch { }
+
+    const mensagem = encodeURIComponent(montarMensagem());
+    window.open(`https://wa.me/?text=${mensagem}`, "_blank", "noopener,noreferrer");
+
+    setMensagemStatus("✅ Mensagem aberta no WhatsApp.");
+    setTimeout(() => setMensagemStatus(""), 3000);
+
+    // 🔹 limpa os outros campos mantendo culto e congregação
+    limparTudo();
   };
 
   // opções

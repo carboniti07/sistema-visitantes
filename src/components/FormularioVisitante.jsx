@@ -176,15 +176,23 @@ const handleEnviar = async () => {
     return;
   }
 
-  // Detecta ambiente: localhost em dev, Render em produção
   const API_URL =
     window.location.hostname === "localhost"
       ? "http://localhost:3001"
       : "https://sistema-visitantes-backend.onrender.com";
 
   try {
-    // 🔹 Salvar visitante no backend
-    await fetch(`${API_URL}/visitantes`, {
+    // Monta mensagem primeiro
+    const mensagem = encodeURIComponent(montarMensagem());
+    const linkWhatsApp = `https://wa.me/?text=${mensagem}`;
+
+    // 🔹 Redireciona para o WhatsApp primeiro (funciona melhor no Safari iOS)
+    setTimeout(() => {
+      window.location.href = linkWhatsApp;
+    }, 100);
+
+    // 🔹 Envia visitante ao servidor (sem bloquear o redirecionamento)
+    fetch(`${API_URL}/visitantes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -193,21 +201,22 @@ const handleEnviar = async () => {
           comoConheceuOptions.find((c) => c.value === form.comoconheceu)?.label || "",
         dataHora: new Date().toLocaleString("pt-BR"),
       }),
-    });
-
-    // 🔹 Abre mensagem no WhatsApp
-    const mensagem = encodeURIComponent(montarMensagem());
-    window.open(`https://wa.me/?text=${mensagem}`, "_blank", "noopener,noreferrer");
-
-    setMensagemStatus("✅ Visitante salvo e mensagem aberta no WhatsApp.");
-    setTimeout(() => setMensagemStatus(""), 3000);
-
-    limparTudo(); // mantém culto e congregação
+    })
+      .then(() => {
+        setMensagemStatus("✅ Visitante salvo e mensagem enviada para o WhatsApp.");
+        setTimeout(() => setMensagemStatus(""), 3000);
+        limparTudo();
+      })
+      .catch((err) => {
+        console.error("Erro ao salvar visitante:", err);
+        setMensagemStatus("❌ Erro ao salvar visitante no servidor.");
+      });
   } catch (err) {
-    console.error("Erro ao salvar visitante:", err);
-    setMensagemStatus("❌ Erro ao salvar visitante no servidor.");
+    console.error("Erro ao enviar:", err);
+    setMensagemStatus("❌ Erro inesperado ao enviar visitante.");
   }
 };
+
 
 
   // opções
